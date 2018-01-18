@@ -11,6 +11,9 @@ using Users.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Identity;
 using Users.Infrastructure;
+using Microsoft.AspNetCore.Authentication;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Users
 {
@@ -26,7 +29,23 @@ namespace Users
         {
             services.AddTransient<IPasswordValidator<AppUser>, CustomPasswordValidator>();
             services.AddTransient<IUserValidator<AppUser>, CustomNameValidator>();
+            services.AddSingleton<IClaimsTransformation, LocationClaimsTransformation>();
+            services.AddTransient<IAuthorizationHandler, BlockUsersHandler>();
             
+            services.AddAuthorization(opts =>
+            {
+                opts.AddPolicy("DCUsers", policyBuilder => 
+                {
+                    policyBuilder.RequireClaim(ClaimTypes.StateOrProvince, "DC");
+                    policyBuilder.RequireRole("Users");
+                });
+                opts.AddPolicy("NoYJ", policyBuilder => 
+                {
+                    policyBuilder.RequireAuthenticatedUser();
+                    policyBuilder.AddRequirements(new BlockUsersRequirement("yj"));
+                });
+            });
+
             services.AddDbContext<AppIdentityDbContext>(opts =>
             {
                 opts.UseMySQL(this.Configuration["Data:SportStoreIdentity:ConnectionString"]);
@@ -53,6 +72,7 @@ namespace Users
             app.UseStaticFiles();
             app.UseAuthentication();
             app.UseMvcWithDefaultRoute();
+            //AppIdentityDbContext.CreateAdminAccount(app.ApplicationServices, this.Configuration).Wait();
         }
     }
 }

@@ -31,7 +31,8 @@ namespace Users
             services.AddTransient<IUserValidator<AppUser>, CustomNameValidator>();
             services.AddSingleton<IClaimsTransformation, LocationClaimsTransformation>();
             services.AddTransient<IAuthorizationHandler, BlockUsersHandler>();
-            
+            services.AddTransient<IAuthorizationHandler, DocumentAuthorization>();
+
             services.AddAuthorization(opts =>
             {
                 opts.AddPolicy("DCUsers", policyBuilder => 
@@ -44,6 +45,20 @@ namespace Users
                     policyBuilder.RequireAuthenticatedUser();
                     policyBuilder.AddRequirements(new BlockUsersRequirement("yj"));
                 });
+                opts.AddPolicy("AuthorsAndEditors", policyBuilder => 
+                {
+                    policyBuilder.AddRequirements(new DocumentAuthorizationRequirement
+                    {
+                        AllowAuthors = true,
+                        AllowEditors = true
+                    });
+                });
+            });
+
+            services.AddAuthentication().AddGoogle(opt =>
+            {
+                opt.ClientId = "338992974621-fmso966e6k7dpik8fqo2j38v8eru6ie2.apps.googleusercontent.com";
+                opt.ClientSecret = "wElTmddTAPBXk7ZM20FoY8_O";
             });
 
             services.AddDbContext<AppIdentityDbContext>(opts =>
